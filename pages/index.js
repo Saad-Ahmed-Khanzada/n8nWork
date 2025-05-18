@@ -25,103 +25,10 @@ export default function Home() {
     setDebateRounds([]);
     setTopic('');
     
-    try {
-      // Replace with your actual n8n webhook URL
-      const webhookUrl = process.env.N8N_WEBHOOK_URL || 'https://saadahmedkz.app.n8n.cloud/webhook/debate';
-      
-      // Initial request to start the debate
-      const response = await fetch('/api/debate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userPrompt: userInput }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to start debate: ${response.status}`);
-      }
-
-      // Get initial acknowledgment
-      const ackData = await response.json();
-      console.log('Received acknowledgment:', ackData);
-      
-      // In a real implementation, we would wait for the full debate result
-      // For simplicity in this first test, we'll simulate waiting for the result
-      setTopic('Processing: ' + userInput);
-      
-      // Simulate waiting for debate result with a simple polling
-      // setTimeout(async () => {
-      //   try {
-      //     // In a full implementation, this would be a different endpoint to get results
-      //     // For now, we'll simulate a result for testing
-          
-      //     // Mock debate data for testing
-      //     const mockDebate = {
-      //       debate_result: {
-      //         topic: userInput.includes('about') ? userInput.split('about')[1].trim() : userInput,
-      //         supporting_arguments: {
-      //           stance: "Support",
-      //           points: [
-      //             {
-      //               title: "Sample Supporting Point 1",
-      //               description: "This is a sample supporting argument."
-      //             },
-      //             {
-      //               title: "Sample Supporting Point 2",
-      //               description: "This is another sample supporting argument."
-      //             }
-      //           ]
-      //         },
-      //         opposing_arguments: {
-      //           position: "Opposing",
-      //           points: [
-      //             {
-      //               point: "Sample Opposing Point 1",
-      //               detail: "This is a sample opposing argument."
-      //             },
-      //             {
-      //               point: "Sample Opposing Point 2",
-      //               detail: "This is another sample opposing argument."
-      //             }
-      //           ]
-      //         }
-      //       }
-      //     };
-
-      //     setTopic(mockDebate.debate_result.topic);
-      //     setDebateRounds([
-      //       {
-      //         round: 1,
-      //         supporting: mockDebate.debate_result.supporting_arguments,
-      //         opposing: mockDebate.debate_result.opposing_arguments
-      //       }
-      //     ]);
-          
-      //     // Set the topic and debate rounds
-      //     setTopic(mockDebate.debate_result.topic);
-      //     setDebateRounds([
-      //       {
-      //         round: 1,
-      //         supporting: mockDebate.debate_result.supporting_arguments,
-      //         opposing: mockDebate.debate_result.opposing_arguments
-      //       }
-      //     ]);
-          
-      //     // In a real implementation, we would connect to the actual debate result
-          
-      //   } catch (pollError) {
-      //     setError(`Error retrieving debate result: ${pollError.message}`);
-      //   } finally {
-      //     setLoading(false);
-      //   }
-      // }, 3000); // Simulate 3 second delay for debate generation
-      // Replace the setTimeout mock data section with:
-
-
-// In your handleSubmit function
+ // In your handleSubmit function
 try {
-  // Initial request to start the debate
+  console.log('Sending request to API...');
+  
   const response = await fetch('/api/debate', {
     method: 'POST',
     headers: {
@@ -130,18 +37,33 @@ try {
     body: JSON.stringify({ userPrompt: userInput }),
   });
 
+  console.log('API response status:', response.status);
+  
   if (!response.ok) {
     throw new Error(`Failed to start debate: ${response.status}`);
   }
 
-  // Get response data
-  const responseData = await response.json();
-  console.log('Received data:', responseData);
+  // Get the raw response text first to see exactly what's coming back
+  const responseText = await response.text();
+  console.log('Raw API response text:', responseText);
+  
+  // Parse it ourselves
+  let responseData;
+  try {
+    responseData = JSON.parse(responseText);
+  } catch (e) {
+    console.error('Error parsing API response:', e);
+    throw new Error('Invalid JSON in API response');
+  }
+  
+  console.log('Parsed API response:', responseData);
   
   // Check if we have debate results
-  if (responseData.debate_result) {
-    // We have proper debate results
+  if (responseData && responseData.debate_result) {
+    console.log('Found debate_result in response data');
+    
     const { topic, supporting_arguments, opposing_arguments } = responseData.debate_result;
+    console.log('Extracted components:', { topic, supporting_arguments, opposing_arguments });
     
     // Set the topic
     setTopic(topic);
@@ -155,9 +77,8 @@ try {
       }
     ]);
   } else {
-    // No proper debate results
+    console.error('No debate_result found in response data:', responseData);
     setError('Received response but no debate data was found');
-    console.error('Invalid response format:', responseData);
   }
   
   setLoading(false);
@@ -166,11 +87,6 @@ try {
   console.error('Error:', err);
   setLoading(false);
 }
-    } catch (err) {
-      setError(err.message);
-      console.error('Error:', err);
-      setLoading(false);
-    }
   };
 
   return (
